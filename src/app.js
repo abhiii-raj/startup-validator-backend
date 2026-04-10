@@ -4,8 +4,15 @@ const { ZodError } = require("zod");
 const { ideasRouter } = require("./routes/ideas");
 const { authRouter } = require("./routes/auth");
 const { env } = require("./config/env");
+const { HttpError } = require("./utils/errors");
 
 const app = express();
+
+function normalizeOrigin(origin) {
+  return origin.trim().replace(/\/+$/, "");
+}
+
+const allowedOrigins = new Set(env.clientOrigins.map(normalizeOrigin));
 
 app.use(
   cors({
@@ -14,11 +21,12 @@ app.use(
         return callback(null, true);
       }
 
-      if (env.clientOrigins.includes(origin)) {
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (allowedOrigins.has(normalizedOrigin)) {
         return callback(null, true);
       }
 
-      return callback(new Error("CORS blocked for this origin."));
+      return callback(new HttpError(403, "CORS blocked for this origin."));
     }
   })
 );
